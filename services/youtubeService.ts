@@ -17,8 +17,8 @@ export interface YouTubeVideo {
 
 export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
   try {
-    // Broaden search for educational content with minimal filters
-    const educationalQuery = `learn ${query} tutorial course how to guide`;
+    // Expand search for long-format educational content
+    const educationalQuery = `${query} how to learning educational skills tutorial tips and tricks study course guide step-by-step in-depth explanation training walkthrough project-based learning masterclass lesson workshop demonstration full class lecture practical implementation concept explanation practice session complete series fundamentals basics advanced technical training`;
     const searchResponse = await axios.get(`${BASE_URL}/search`, {
       params: {
         part: 'snippet',
@@ -43,16 +43,21 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
     // Map videos without strict filtering, but ensure some educational relevance
     const videos: YouTubeVideo[] = detailsResponse.data.items
       .filter((item: any) => {
-        // Minimal filter: exclude very short videos (less than 5 minutes) and ensure title/description has educational keywords
+        // Prioritize long-format videos (10 minutes or more) and ensure educational relevance
         const duration = item.contentDetails?.duration || '';
         const minutes = parseDuration(duration);
         const title = item.snippet.title.toLowerCase();
         const description = item.snippet.description.toLowerCase();
-        const educationalKeywords = ['learn', 'tutorial', 'course', 'how to', 'guide', 'lesson', 'education', 'teaching'];
+        const educationalKeywords = ['how to', 'learning', 'educational', 'skills', 'tutorial', 'tips and tricks', 'study', 'course', 'guide', 'step-by-step', 'in-depth explanation', 'training', 'walkthrough', 'project-based learning', 'masterclass', 'lesson', 'workshop', 'demonstration', 'full class', 'lecture', 'practical implementation', 'concept explanation', 'practice session', 'complete series', 'fundamentals', 'basics', 'advanced', 'technical training'];
         const hasEducationalKeyword = educationalKeywords.some(keyword =>
           title.includes(keyword) || description.includes(keyword)
         );
-        return minutes >= 5 && hasEducationalKeyword;
+        // Exclude Shorts, music videos, vlogs, entertainment, news
+        const excludeKeywords = ['shorts', 'music', 'vlog', 'entertainment', 'news', 'song', 'live', 'interview'];
+        const isExcluded = excludeKeywords.some(keyword =>
+          title.includes(keyword) || description.includes(keyword)
+        );
+        return minutes >= 10 && hasEducationalKeyword && !isExcluded;
       })
       .map((item: any) => {
         const views = parseInt(item.statistics.viewCount) || 0;
