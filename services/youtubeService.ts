@@ -17,41 +17,42 @@ export interface YouTubeVideo {
 
 export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]> => {
   try {
-    // First, search for educational videos only (exclude shorts, minimum 20 minutes)
-    const educationalQuery = `${query} tutorial course learn programming`;
+    // Broaden search for educational content with minimal filters
+    const educationalQuery = `learn ${query} tutorial course how to guide`;
     const searchResponse = await axios.get(`${BASE_URL}/search`, {
       params: {
         part: 'snippet',
         q: educationalQuery,
         type: 'video',
-        videoCategoryId: '27', // Education category
-        videoDuration: 'long', // Videos longer than 20 minutes
-        maxResults: 50, // Increase to allow filtering for unique channels
+        maxResults: 50, // Fetch more to allow broader selection
         key: API_KEY,
       },
     });
 
     const videoIds = searchResponse.data.items.map((item: any) => item.id.videoId).join(',');
 
-    // Then, get details including statistics
+    // Get details including statistics and content details for duration
     const detailsResponse = await axios.get(`${BASE_URL}/videos`, {
       params: {
-        part: 'snippet,statistics',
+        part: 'snippet,statistics,contentDetails',
         id: videoIds,
         key: API_KEY,
       },
     });
 
-    // Filter to unique channels (one video per channel)
-    const channelSet = new Set<string>();
+    // Map videos without strict filtering, but ensure some educational relevance
     const videos: YouTubeVideo[] = detailsResponse.data.items
       .filter((item: any) => {
-        const channelId = item.snippet.channelId;
-        if (channelSet.has(channelId)) {
-          return false;
-        }
-        channelSet.add(channelId);
-        return true;
+        // Minimal filter: exclude very short videos (less than 5 minutes) and ensure title/description has educational keywords
+        const duration = item.contentDetails?.duration || '';
+        const minutes = parseDuration(duration);
+        const title = item.snippet.title.toLowerCase();
+        const description = item.snippet.description.toLowerCase();
+        const educationalKeywords = ['learn', 'tutorial', 'course', 'how to', 'guide', 'lesson', 'education', 'teaching'];
+        const hasEducationalKeyword = educationalKeywords.some(keyword =>
+          title.includes(keyword) || description.includes(keyword)
+        );
+        return minutes >= 5 && hasEducationalKeyword;
       })
       .map((item: any) => {
         const views = parseInt(item.statistics.viewCount) || 0;
@@ -59,12 +60,11 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
         const dislikes = parseInt(item.statistics.dislikeCount) || 0;
         const comments = parseInt(item.statistics.commentCount) || 0;
 
-        // Calculate review percentage out of 10 based on views, likes, dislikes, comments
-        // Normalize each metric and weight them
-        const viewScore = Math.min(views / 1000000, 1) * 4; // Max 4 points for views
-        const likeScore = Math.min(likes / 100000, 1) * 3; // Max 3 points for likes
-        const commentScore = Math.min(comments / 10000, 1) * 2; // Max 2 points for comments
-        const engagementScore = (likes / (likes + dislikes + 1)) * 1; // Max 1 point for engagement ratio
+        // Calculate rating based on engagement
+        const viewScore = Math.min(views / 1000000, 1) * 4;
+        const likeScore = Math.min(likes / 100000, 1) * 3;
+        const commentScore = Math.min(comments / 10000, 1) * 2;
+        const engagementScore = (likes / (likes + dislikes + 1)) * 1;
 
         const reviewPercentage = Math.round((viewScore + likeScore + commentScore + engagementScore) * 10) / 10;
 
@@ -73,7 +73,7 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
           title: item.snippet.title,
           thumbnail: item.snippet.thumbnails.medium.url,
           views: formatViews(views),
-          rating: Math.min(reviewPercentage, 10), // Cap at 10
+          rating: Math.min(reviewPercentage, 10),
           provider: 'YouTube',
           category: 'Education',
           aiSummary: `Learn about ${item.snippet.title} on YouTube.`,
@@ -95,4 +95,13 @@ const formatViews = (views: number): string => {
     return `${(views / 1000).toFixed(1)}K`;
   }
   return views.toString();
+};
+
+const parseDuration = (duration: string): number => {
+  const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || '0') || 0;
+  const minutes = parseInt(match[2] || '0') || 0;
+  const seconds = parseInt(match[3] || '0') || 0;
+  return hours * 60 + minutes + seconds / 60;
 };

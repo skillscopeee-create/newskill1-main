@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { dummyData, Resource } from '../data/dummyData';
 import Card from '../components/Card';
 import { StarIcon, EyeIcon, SparklesIcon, TrophyIcon } from '../components/IconComponents';
 import { searchYouTubeVideos, YouTubeVideo } from '../services/youtubeService';
@@ -16,7 +15,7 @@ const parseViews = (views: string): number => {
   return num;
 };
 
-const ResourceCard: React.FC<{ resource: Resource }> = ({ resource }) => (
+const ResourceCard: React.FC<{ resource: YouTubeVideo }> = ({ resource }) => (
   <Card className="flex flex-col overflow-hidden h-full group">
     <div className="overflow-hidden">
         <img src={resource.thumbnail} alt={resource.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -91,8 +90,7 @@ const Results: React.FC = () => {
   const topVideos = sortedVideos.slice(0, 5);
 
   const filteredResults = sortedVideos.filter(item =>
-    item.title.toLowerCase().includes(query.toLowerCase()) ||
-    item.category.toLowerCase().includes(query.toLowerCase())
+    item.title.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
