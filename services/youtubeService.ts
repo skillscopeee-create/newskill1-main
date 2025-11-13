@@ -57,7 +57,7 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
         const isExcluded = excludeKeywords.some(keyword =>
           title.includes(keyword) || description.includes(keyword)
         );
-        return minutes >= 3 && hasEducationalKeyword && !isExcluded;
+        return hasEducationalKeyword && !isExcluded;
       })
       .map((item: any) => {
         const views = parseInt(item.statistics.viewCount) || 0;
