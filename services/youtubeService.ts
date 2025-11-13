@@ -40,26 +40,28 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
       },
     });
 
-    // Map videos without strict filtering, but ensure some educational relevance
-    const videos: YouTubeVideo[] = detailsResponse.data.items
+    // Exclude only entertainment or off-topic videos, give preference to educational keywords
+    const educationalKeywords = ['how to', 'learning', 'educational', 'skills', 'tutorial', 'tips and tricks', 'study', 'course', 'guide', 'step-by-step', 'in-depth explanation', 'training', 'walkthrough', 'project-based learning', 'masterclass', 'lesson', 'workshop', 'demonstration', 'full class', 'lecture', 'practical implementation', 'concept explanation', 'practice session', 'complete series', 'fundamentals', 'basics', 'advanced', 'technical training'];
+    const excludeKeywords = ['shorts', 'music', 'vlog', 'entertainment', 'news', 'song', 'live', 'interview'];
+
+    const videosWithPreference = detailsResponse.data.items
       .filter((item: any) => {
-        // Prioritize long-format videos (10 minutes or more) and ensure educational relevance
-        const duration = item.contentDetails?.duration || '';
-        const minutes = parseDuration(duration);
         const title = item.snippet.title.toLowerCase();
         const description = item.snippet.description.toLowerCase();
-        const educationalKeywords = ['how to', 'learning', 'educational', 'skills', 'tutorial', 'tips and tricks', 'study', 'course', 'guide', 'step-by-step', 'in-depth explanation', 'training', 'walkthrough', 'project-based learning', 'masterclass', 'lesson', 'workshop', 'demonstration', 'full class', 'lecture', 'practical implementation', 'concept explanation', 'practice session', 'complete series', 'fundamentals', 'basics', 'advanced', 'technical training'];
-        const hasEducationalKeyword = educationalKeywords.some(keyword =>
-          title.includes(keyword) || description.includes(keyword)
-        );
-        // Exclude Shorts, music videos, vlogs, entertainment, news
-        const excludeKeywords = ['shorts', 'music', 'vlog', 'entertainment', 'news', 'song', 'live', 'interview'];
         const isExcluded = excludeKeywords.some(keyword =>
           title.includes(keyword) || description.includes(keyword)
         );
-        return hasEducationalKeyword && !isExcluded;
+        return !isExcluded;
       })
       .map((item: any) => {
+        const title = item.snippet.title.toLowerCase();
+        const description = item.snippet.description.toLowerCase();
+        const preferenceScore = educationalKeywords.reduce((score, keyword) => {
+          if (title.includes(keyword) || description.includes(keyword)) {
+            return score + 1;
+          }
+          return score;
+        }, 0);
         const views = parseInt(item.statistics.viewCount) || 0;
         const likes = parseInt(item.statistics.likeCount) || 0;
         const dislikes = parseInt(item.statistics.dislikeCount) || 0;
@@ -83,10 +85,21 @@ export const searchYouTubeVideos = async (query: string): Promise<YouTubeVideo[]
           category: 'Education',
           aiSummary: `Learn about ${item.snippet.title} on YouTube.`,
           url: `https://www.youtube.com/watch?v=${item.id}`,
+          preferenceScore,
         };
       });
 
-    return videos;
+    // Sort by preference score descending, then by rating
+    videosWithPreference.sort((a, b) => {
+      const aScore = a.preferenceScore || 0;
+      const bScore = b.preferenceScore || 0;
+      if (aScore !== bScore) {
+        return bScore - aScore;
+      }
+      return b.rating - a.rating;
+    });
+
+    return videosWithPreference;
   } catch (error) {
     console.error('Error fetching YouTube videos:', error);
     return [];
