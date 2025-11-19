@@ -86,36 +86,16 @@ const Results: React.FC = () => {
     return viewsB - viewsA;
   });
 
-  // Top 5 videos
-  const topVideos = sortedVideos.slice(0, 5);
+  // Top 10 videos
+  const topVideos = sortedVideos.slice(0, 10);
 
-  const filteredResults = sortedVideos.filter(item =>
-    item.title.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredResults = sortedVideos;
 
   return (
     <div className="space-y-8">
       <div>
         <Link to="/search" className="text-sm text-white/60 hover:text-white">&larr; Back to Search</Link>
         <h1 className="text-3xl md:text-4xl font-bold mt-2">Results for "{query}"</h1>
-      </div>
-
-      {/* Top Videos Section */}
-      <div>
-        <h2 className="text-2xl md:text-3xl font-bold mb-4">Top Videos</h2>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          </div>
-        ) : (
-          <div className="flex overflow-x-auto space-x-4 pb-4">
-            {topVideos.map(resource => (
-              <div key={resource.id} className="flex-shrink-0 w-64">
-                <ResourceCard resource={resource} />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {loading ? (
@@ -134,6 +114,24 @@ const Results: React.FC = () => {
             <p className="text-white/70">Try searching for another topic or skill.</p>
         </Card>
       )}
+
+      {/* Top Videos Section */}
+      <div>
+        <h2 className="text-2xl md:text-3xl font-bold mb-4">Top Videos</h2>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+        ) : (
+          <div className="flex overflow-x-auto space-x-4 pb-4">
+            {topVideos.map(resource => (
+              <div key={resource.id} className="flex-shrink-0 w-64">
+                <ResourceCard resource={resource} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
